@@ -1,0 +1,34 @@
+﻿# Build artifacts
+build/
+build-*/
+out/
+
+# IDE / editor local state
+.vscode/
+.vs/
+*.suo
+*.user
+
+# CMake / Visual Studio generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.vcxproj
+*.vcxproj.filters
+*.slnx
+*.pdb
+*.obj
+*.ilk
+*.tlog
+*.recipe
+
+# Runtime outputs generated during local experiments
+*.log
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Generated report build directories
+reports/build/
+reports/build-*/

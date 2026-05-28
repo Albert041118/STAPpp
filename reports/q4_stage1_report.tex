@@ -1,0 +1,180 @@
+﻿\documentclass[UTF8,11pt,a4paper]{ctexart}
+\usepackage[margin=25mm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible
+}
+
+\title{Q4 四节点等参单元实现与 ABAQUS 前验证阶段报告}
+\author{有限元法大作业 I：STAP++ 程序扩展}
+\date{2026 年 5 月 9 日}
+
+\begin{document}
+\maketitle
+
+\section{阶段目标}
+本阶段目标是在 STAP++ 中完成 Q4 四节点等参四边形单元的实现，并在进入 ABAQUS 对比验证之前，补充分片试验、网格加密验证、自动化算例生成与结果汇总。本文档是阶段性报告，后续将继续补充 ABAQUS 验证、完整收敛率图表和最终结论。
+
+\section{程序实现概述}
+新增单元类 \texttt{CQ4} 支持二维线弹性问题。每个 Q4 单元包含四个节点，每节点使用 $u_x,u_y$ 两个自由度。由于当前 STAP++ 节点类固定含有三个平移自由度，Q4 算例中第三自由度 $u_z$ 均设置为约束，以避免无刚度自由度导致总体刚度矩阵奇异。
+
+新增材料类 \texttt{CQ4Material}，材料输入格式为：
+\begin{lstlisting}
+nset  E  nu  thickness  mode
+\end{lstlisting}
+其中 \texttt{mode=1} 表示平面应力，\texttt{mode=2} 表示平面应变。Q4 单元组输入格式为：
+\begin{lstlisting}
+2  NUME  NUMMAT
+nset  E  nu  thickness  mode
+element_id  node1  node2  node3  node4  material_set
+\end{lstlisting}
+节点按逆时针顺序输入。程序在计算刚度矩阵时检查 Jacobi 行列式，若 $\det J\le 0$，则报告节点顺序或单元几何错误。
+
+主要修改包括：
+\begin{itemize}
+  \item 新增 \texttt{src/h/Q4.h} 与 \texttt{src/cpp/Q4.cpp}；
+  \item 在 \texttt{Material.h/.cpp} 中新增 \texttt{CQ4Material}；
+  \item 在 \texttt{ElementGroup.h/.cpp} 中接入 \texttt{ElementTypes::Q4}；
+  \item 在 \texttt{Outputter.h/.cpp} 中新增 Q4 材料、单元和应力输出；
+  \item 修正 \texttt{CElement} 对材料指针的所有权问题，避免析构时错误释放非拥有指针；
+  \item 修正 \texttt{CElementGroup::Read} 未检查材料读取失败的问题。
+\end{itemize}
+
+\section{Q4 单元公式}
+Q4 单元采用自然坐标 $(\xi,\eta)$ 下的双线性形函数：
+\begin{align}
+N_1 &= \frac{1}{4}(1-\xi)(1-\eta), &
+N_2 &= \frac{1}{4}(1+\xi)(1-\eta),\\
+N_3 &= \frac{1}{4}(1+\xi)(1+\eta), &
+N_4 &= \frac{1}{4}(1-\xi)(1+\eta).
+\end{align}
+单元刚度矩阵采用 $2\times2$ Gauss 积分：
+\begin{equation}
+K_e = \sum_{g=1}^{4} B_g^T D B_g \det(J_g)t,
+\end{equation}
+其中 $B$ 为应变--位移矩阵，$D$ 为弹性矩阵，$J$ 为等参映射 Jacobi 矩阵，$t$ 为厚度。
+
+平面应力矩阵为：
+\begin{equation}
+D = \frac{E}{1-\nu^2}
+\begin{bmatrix}
+1 & \nu & 0\\
+\nu & 1 & 0\\
+0 & 0 & (1-\nu)/2
+\end{bmatrix}.
+\end{equation}
+平面应变矩阵为：
+\begin{equation}
+D = \frac{E}{(1+\nu)(1-2\nu)}
+\begin{bmatrix}
+1-\nu & \nu & 0\\
+\nu & 1-\nu & 0\\
+0 & 0 & (1-2\nu)/2
+\end{bmatrix}.
+\end{equation}
+当前程序输出单元中心点 $(\xi,\eta)=(0,0)$ 处的 $(\sigma_x,\sigma_y,\tau_{xy})$。
+
+\section{自动化验证脚本}
+本阶段新增两个脚本：
+\begin{itemize}
+  \item \texttt{tools/q4\_generate\_cases.py}：生成 Q4 分片试验、拉伸网格加密和剪切网格加密算例；
+  \item \texttt{tools/q4\_parse\_results.py}：解析 STAP++ 输出文件，生成 CSV 汇总表。
+\end{itemize}
+验证流程如下：
+\begin{lstlisting}
+python tools/q4_generate_cases.py --outdir data/q4_generated --manifest data/q4_generated/manifest.json
+cmake -S src -B build-codex
+cmake --build build-codex --config Debug
+# 逐个运行 data/q4_generated/*.dat
+python tools/q4_parse_results.py --manifest data/q4_generated/manifest.json --dat-dir data/q4_generated --table-dir reports/tables
+\end{lstlisting}
+生成的表格包括 \texttt{reports/tables/q4\_patch\_summary.csv}、\texttt{reports/tables/q4\_patch\_nodes.csv} 和 \texttt{reports/tables/q4\_convergence\_summary.csv}。
+
+\section{分片试验}
+分片试验采用 $2\times2$ Q4 网格和线性位移场：
+\begin{equation}
+u=a x,\qquad v=b y,
+\end{equation}
+其中 $a=1.0\times10^{-3}$，$b=-5.0\times10^{-4}$。为避免修改 STAP++ 的非零位移边界条件格式，脚本先在外部组装该网格的刚度矩阵，再用 $f=Ku$ 反算等效节点力；同时只约束目标位移为零的自由度。因此，该算例可以在现有 STAP++ 输入格式下检验 Q4 是否能精确再现常应变场。
+
+\begin{table}[h]
+\centering
+\caption{Q4 分片试验结果}
+\begin{tabular}{lccc}
+\toprule
+指标 & 数值结果 & 理论值 & 误差 \\
+\midrule
+最大 $u_x$ 绝对误差 & $0.0$ & $0$ & $0.0$ \\
+最大 $u_y$ 绝对误差 & $0.0$ & $0$ & $0.0$ \\
+平均 $\sigma_x$ & $1.96154\times10^2$ & $1.961538\times10^2$ & $1.54\times10^{-4}$ \\
+平均 $\sigma_y$ & $-4.61538\times10^1$ & $-4.615385\times10^1$ & $4.62\times10^{-5}$ \\
+平均 $\tau_{xy}$ & $1.31\times10^{-14}$ & $0$ & $1.31\times10^{-14}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+应力误差主要来自 STAP++ 输出文件的科学计数法精度截断；位移误差为零，说明该 Q4 单元通过了本阶段的常应变分片试验。
+
+\section{网格加密验证}
+网格加密验证生成 $1\times1$、$2\times2$、$4\times4$ 和 $8\times8$ 四组网格。左边界固定，右边界施加等效节点力。由于本阶段尚未引入 ABAQUS 或解析梁板解，误差以 $8\times8$ 网格结果作为参考值进行自收敛比较。
+
+\begin{table}[h]
+\centering
+\caption{拉伸算例网格加密结果}
+\begin{tabular}{ccccc}
+\toprule
+网格 & 最大 $u_x$ & 平均 $\sigma_x$ & 相对 $8\times8$ 差异 & 备注 \\
+\midrule
+$1\times1$ & $4.62010\times10^{-3}$ & $1.00000\times10^3$ & $2.14\times10^{-2}$ & 通过 \\
+$2\times2$ & $4.68107\times10^{-3}$ & $1.00000\times10^3$ & $8.44\times10^{-3}$ & 通过 \\
+$4\times4$ & $4.71071\times10^{-3}$ & $9.99999\times10^2$ & $2.16\times10^{-3}$ & 通过 \\
+$8\times8$ & $4.72091\times10^{-3}$ & $1.00000\times10^3$ & $0$ & 参考 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{剪切算例网格加密结果}
+\begin{tabular}{ccccc}
+\toprule
+网格 & 最大 $u_y$ & 平均 $\tau_{xy}$ & 相对 $8\times8$ 差异 & 备注 \\
+\midrule
+$1\times1$ & $1.10053\times10^{-2}$ & $5.00000\times10^2$ & $3.51\times10^{-1}$ & 通过 \\
+$2\times2$ & $1.39833\times10^{-2}$ & $5.00000\times10^2$ & $1.75\times10^{-1}$ & 通过 \\
+$4\times4$ & $1.60605\times10^{-2}$ & $5.00000\times10^2$ & $5.27\times10^{-2}$ & 通过 \\
+$8\times8$ & $1.69541\times10^{-2}$ & $5.00000\times10^2$ & $0$ & 参考 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+拉伸和剪切算例均随网格加密向 $8\times8$ 参考解靠近，说明 Q4 单元的装配、边界约束、加载和应力恢复流程具有合理的网格一致性。
+
+\section{回归与异常测试}
+本阶段重新构建程序，并运行原有 Bar 算例和已有 Q4 算例。以下算例均正常结束：
+\begin{itemize}
+  \item \texttt{data/bar-6.dat}；
+  \item \texttt{data/q4-single.dat}；
+  \item \texttt{data/q4-plane-strain.dat}；
+  \item \texttt{data/q4-two-element.dat}；
+  \item \texttt{data/q4-shear.dat}；
+  \item \texttt{data/q4\_generated/*.dat}。
+\end{itemize}
+异常算例 \texttt{q4-invalid-mode.dat} 和 \texttt{q4-invalid-jacobian.dat} 保持有效，分别用于检查非法材料模式和错误节点顺序。
+
+\section{ABAQUS 验证（待补充）}
+本阶段尚未进行 ABAQUS 建模和对比。下一阶段将选择一个代表性平面应力或平面应变问题，在 ABAQUS 中建立相同几何、材料、边界条件和载荷，并对比关键节点位移、平均应力和应力分布趋势。
+
+\section{阶段结论}
+当前 Q4 单元已经完成 STAP++ 框架接入，并通过了基础算例、正式分片试验和网格加密验证。验证结果表明，该实现能够正确处理平面应力/平面应变材料、Q4 刚度矩阵装配、中心点应力恢复和常见输入错误检查。下一步工作是进行 ABAQUS 对比验证并补充最终报告中的验证图表和结论。
+
+\end{document}

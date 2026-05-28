@@ -1,0 +1,2 @@
+case,max_abs_ux_error,max_abs_uy_error,sigma_x_avg,sigma_x_expected,sigma_x_error,sigma_y_avg,sigma_y_expected,sigma_y_error,tau_xy_avg,tau_xy_expected,tau_xy_error
+q4_patch_2x2,0.0,0.0,196.154,196.15384615384613,0.00015384615386437872,-46.1538,-46.153846153846146,4.615384614936602e-05,1.3119624999997821e-14,0.0,1.3119624999997821e-14

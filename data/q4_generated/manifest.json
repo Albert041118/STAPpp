@@ -1,0 +1,105 @@
+{
+  "material": {
+    "E": 210000.0,
+    "nu": 0.3,
+    "thickness": 1.0,
+    "mode": 1
+  },
+  "cases": [
+    {
+      "name": "q4_patch_2x2",
+      "type": "patch",
+      "expected_nodes": {
+        "1": {
+          "ux": 0.0,
+          "uy": -0.0
+        },
+        "2": {
+          "ux": 0.0005,
+          "uy": -0.0
+        },
+        "3": {
+          "ux": 0.001,
+          "uy": -0.0
+        },
+        "4": {
+          "ux": 0.0,
+          "uy": -0.00025
+        },
+        "5": {
+          "ux": 0.0005,
+          "uy": -0.00025
+        },
+        "6": {
+          "ux": 0.001,
+          "uy": -0.00025
+        },
+        "7": {
+          "ux": 0.0,
+          "uy": -0.0005
+        },
+        "8": {
+          "ux": 0.0005,
+          "uy": -0.0005
+        },
+        "9": {
+          "ux": 0.001,
+          "uy": -0.0005
+        }
+      },
+      "expected_stress": {
+        "sigma_x": 196.15384615384613,
+        "sigma_y": -46.153846153846146,
+        "tau_xy": 0.0
+      }
+    },
+    {
+      "name": "q4_conv_tension_1x1",
+      "type": "convergence",
+      "family": "tension",
+      "n": 1
+    },
+    {
+      "name": "q4_conv_tension_2x2",
+      "type": "convergence",
+      "family": "tension",
+      "n": 2
+    },
+    {
+      "name": "q4_conv_tension_4x4",
+      "type": "convergence",
+      "family": "tension",
+      "n": 4
+    },
+    {
+      "name": "q4_conv_tension_8x8",
+      "type": "convergence",
+      "family": "tension",
+      "n": 8
+    },
+    {
+      "name": "q4_conv_shear_1x1",
+      "type": "convergence",
+      "family": "shear",
+      "n": 1
+    },
+    {
+      "name": "q4_conv_shear_2x2",
+      "type": "convergence",
+      "family": "shear",
+      "n": 2
+    },
+    {
+      "name": "q4_conv_shear_4x4",
+      "type": "convergence",
+      "family": "shear",
+      "n": 4
+    },
+    {
+      "name": "q4_conv_shear_8x8",
+      "type": "convergence",
+      "family": "shear",
+      "n": 8
+    }
+  ]
+}
