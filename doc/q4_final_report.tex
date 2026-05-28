@@ -1,101 +1,186 @@
-\documentclass[UTF8,11pt,a4paper]{ctexart}
-\usepackage[margin=25mm]{geometry}
-\usepackage{amsmath}
+﻿\documentclass[UTF8,11pt,a4paper]{ctexart}
+\usepackage[margin=24mm]{geometry}
+\usepackage{amsmath,amssymb,bm}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{listings}
-\usepackage{xcolor}
+\usepackage{float}
 
-\lstset{
-  basicstyle=\ttfamily\small,
-  breaklines=true,
-  frame=single,
-  columns=fullflexible
-}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+\lstset{basicstyle=\ttfamily\small,breaklines=true,frame=single,columns=fullflexible}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{2em}
 
-\title{Q4 ? T3 ???????????????}
-\author{??????? I?STAP++ ????}
-\date{2026 ? 5 ? 28 ?}
+\title{STAP++ 二维平面弹性单元扩展报告\\Q4 四边形单元与 T3 三角形单元}
+\author{有限元法大作业 I：编程训练}
+\date{2026 年 5 月 28 日}
 
 \begin{document}
 \maketitle
 
-\section{????}
-???? STAP++ ?????????????????? Q4 ???????????????????????????????? T3 ?????????????????? Bar?Q4?T3 ??????? Q4 ? T3 ????????????????????????????????????????
+\begin{abstract}
+本文面向有限元法大作业 I 的“扩展 STAP++ 程序功能”要求，在原 STAP++ 框架中实现了两类二维平面弹性单元：Q4 四节点等参四边形单元和 T3 三节点常应变三角形单元。程序支持平面应力和平面应变两种材料模式，保持 STAP++ 原有输入输出风格，并完成材料读取、单元刚度装配、总体方程求解和单元应力输出。验证部分包括基础算例、分片试验、网格加密自收敛分析、原 Bar 单元回归测试以及非法输入测试。结果表明，Q4 与 T3 均能通过常应变分片试验，拉伸与剪切算例随网格加密呈现合理收敛趋势，新增功能未破坏原有 Bar 单元。
+\end{abstract}
 
-\section{??????}
-Q4 ???? \texttt{CQ4}?????????????? $u_x,u_y$ ???????? $2\times2$ Gauss ??????????????????T3 ???? \texttt{CT3}?????????????? $u_x,u_y$ ??????????????????????????????????
+\tableofcontents
+\newpage
 
-??????????????????
+\section{引言}
+课程项目要求在 STAP++ 或 STAP90 基础上扩展有限元程序功能。个人作业至少需要增加一个单元，并给出单元基本原理、编程思路、输入数据格式、分片试验、收敛性分析和验证算例结果。为使作业内容更完整，本文没有只停留在单个 Q4 单元，而是在 Q4 的基础上进一步实现 T3 单元，使程序具备两类常用二维平面弹性单元。
+
+本项目的主要功能如下：
+\begin{itemize}
+  \item 实现 Q4 四节点等参四边形单元，采用 $2\times2$ Gauss 积分；
+  \item 实现 T3 三节点常应变三角形单元，采用解析常应变矩阵；
+  \item 支持平面应力和平面应变两种本构矩阵；
+  \item 输出每个二维单元的 $\sigma_x$、$\sigma_y$ 和 $\tau_{xy}$；
+  \item 提供 Q4 与 T3 的分片试验、网格加密验证和异常输入测试；
+  \item 使用 Git 分支和 tag 存档原 Q4 版本，便于回滚。
+\end{itemize}
+
+\section{程序结构与输入格式}
+\subsection{代码扩展位置}
+本项目尽量保持 STAP++ 原结构不变，只按已有 Bar 单元风格增加新类和分支。核心修改包括：
+\begin{itemize}
+  \item 新增 \texttt{CQ4} 和 \texttt{CT3} 单元类，分别位于 \texttt{src/h} 与 \texttt{src/cpp}；
+  \item 在 \texttt{Material.h/.cpp} 中新增 \texttt{CQ4Material} 和 \texttt{CT3Material}；
+  \item 在 \texttt{ElementGroup} 中根据单元类型分配对应的元素数组和材料数组；
+  \item 在 \texttt{Outputter} 中增加 Q4/T3 的材料、单元连接关系和应力输出；
+  \item 修正元素材料指针的所有权问题，避免析构时释放非拥有指针；
+  \item 修正材料读取失败未向上传递的问题，使非法材料模式能正常报错。
+\end{itemize}
+
+\subsection{材料输入格式}
+Q4 与 T3 采用相同的材料输入格式：
 \begin{lstlisting}
 nset  E  nu  thickness  mode
 \end{lstlisting}
-?? \texttt{mode=1} ???????\texttt{mode=2} ???????Q4 ????? \texttt{NPAR(1)=2}?T3 ????? \texttt{NPAR(1)=3}??? STAP++ ??????????????????? $u_z$ ??????????????????????
+其中 $E$ 为弹性模量，$\nu$ 为泊松比，\texttt{thickness} 为单元厚度，\texttt{mode=1} 表示平面应力，\texttt{mode=2} 表示平面应变。若 \texttt{mode} 不是 1 或 2，或厚度不为正，程序会返回错误。
 
-?????????
-\begin{itemize}
-  \item ?? \texttt{CQ4} ? \texttt{CT3} ????
-  \item ?? \texttt{CQ4Material} ? \texttt{CT3Material}?
-  \item ? \texttt{ElementGroup} ??? Q4/T3 ?????????
-  \item ? \texttt{Outputter} ??? Q4/T3 ??????????????
-  \item ??? Bar ?????????????????????????????
-\end{itemize}
+\subsection{单元输入格式}
+二维单元均只使用节点的 $x$、$y$ 坐标和 $u_x$、$u_y$ 两个自由度。由于 STAP++ 节点类原本包含三个平移自由度，所有二维算例都将 $u_z$ 约束，避免出现无刚度自由度。
 
-\section{????}
-\subsection{Q4 ???????}
-Q4 ???????? $(\xi,\eta)$ ?????????
+Q4 单元组使用 \texttt{NPAR(1)=2}：
+\begin{lstlisting}
+2  NUME  NUMMAT
+nset  E  nu  thickness  mode
+element_id  node1  node2  node3  node4  material_set
+\end{lstlisting}
+T3 单元组使用 \texttt{NPAR(1)=3}：
+\begin{lstlisting}
+3  NUME  NUMMAT
+nset  E  nu  thickness  mode
+element_id  node1  node2  node3  material_set
+\end{lstlisting}
+两类单元均要求节点按逆时针方向输入。Q4 检查 Gauss 点的 $\det J$，T3 检查面积 $A$；若几何方向错误或单元退化，程序报错停止。
+
+\section{算法说明}
+\subsection{平面弹性本构矩阵}
+平面应力本构矩阵为
+\begin{equation}
+\bm D=\frac{E}{1-\nu^2}
+\begin{bmatrix}
+1&\nu&0\\
+\nu&1&0\\
+0&0&(1-\nu)/2
+\end{bmatrix}.
+\end{equation}
+平面应变本构矩阵为
+\begin{equation}
+\bm D=\frac{E}{(1+\nu)(1-2\nu)}
+\begin{bmatrix}
+1-\nu&\nu&0\\
+\nu&1-\nu&0\\
+0&0&(1-2\nu)/2
+\end{bmatrix}.
+\end{equation}
+单元应变向量和应力向量分别为
+\begin{equation}
+\bm\varepsilon=\begin{bmatrix}\varepsilon_x&\varepsilon_y&\gamma_{xy}\end{bmatrix}^T,
+\qquad
+\bm\sigma=\bm D\bm\varepsilon.
+\end{equation}
+
+\subsection{Q4 四节点等参单元}
+Q4 单元采用自然坐标 $(\xi,\eta)$ 中的双线性形函数：
 \begin{align}
-N_1 &= \frac{1}{4}(1-\xi)(1-\eta), &
-N_2 &= \frac{1}{4}(1+\xi)(1-\eta),\\
-N_3 &= \frac{1}{4}(1+\xi)(1+\eta), &
-N_4 &= \frac{1}{4}(1-\xi)(1+\eta).
+N_1&=\frac14(1-\xi)(1-\eta), & N_2&=\frac14(1+\xi)(1-\eta),\\
+N_3&=\frac14(1+\xi)(1+\eta), & N_4&=\frac14(1-\xi)(1+\eta).
 \end{align}
-???????
+等参映射由 $x=\sum N_i x_i$、$y=\sum N_i y_i$ 给出。程序在每个 Gauss 点计算 Jacobi 矩阵和应变-位移矩阵 $\bm B$，并用 $2\times2$ Gauss 积分计算刚度矩阵：
 \begin{equation}
-K_e = \sum_{g=1}^{4} B_g^T D B_g \det(J_g)t.
+\bm K_e=\sum_{g=1}^{4}\bm B_g^T\bm D\bm B_g\det(\bm J_g)t.
 \end{equation}
-???? Gauss ??? $\det J>0$?????????????????
+应力输出取单元中心点 $(\xi,\eta)=(0,0)$ 的结果。
 
-\subsection{T3 ???????????}
-T3 ?????
+\subsection{T3 三节点常应变单元}
+T3 单元面积为
 \begin{equation}
-A=\frac{1}{2}\left[(x_2-x_1)(y_3-y_1)-(x_3-x_1)(y_2-y_1)\right].
+A=\frac12[(x_2-x_1)(y_3-y_1)-(x_3-x_1)(y_2-y_1)].
 \end{equation}
-?????????? $A>0$?? $A\le0$????????T3 ???--???????????????????
+定义
 \begin{equation}
-K_e=tA B^TDB.
+b_i=y_j-y_k,\qquad c_i=x_k-x_j,
 \end{equation}
-?? Q4?T3 ?????????????????????????? Q4 ?????????????
+其中 $(i,j,k)$ 循环取 $(1,2,3)$、$(2,3,1)$、$(3,1,2)$。T3 的应变-位移矩阵为常量：
+\begin{equation}
+\bm B=\frac{1}{2A}
+\begin{bmatrix}
+b_1&0&b_2&0&b_3&0\\
+0&c_1&0&c_2&0&c_3\\
+c_1&b_1&c_2&b_2&c_3&b_3
+\end{bmatrix}.
+\end{equation}
+因此单元刚度矩阵为
+\begin{equation}
+\bm K_e=tA\bm B^T\bm D\bm B.
+\end{equation}
+T3 的应变和应力在单元内为常量，这使其实现简单、稳定，适合作为第二个扩展单元。
 
-\section{??????????}
-?????? \texttt{others/tools/}?
-\begin{itemize}
-  \item \texttt{q4\_generate\_cases.py} ? \texttt{q4\_parse\_results.py}?????? Q4 ??/?????
-  \item \texttt{t3\_generate\_cases.py} ? \texttt{t3\_parse\_results.py}?????? T3 ??/?????
-\end{itemize}
-????????
+\section{实现方案}
+程序实现遵循“最小改动”原则。单元对象负责读取节点编号和材料编号、生成位置矩阵、计算单元刚度和单元应力；材料对象负责读取和输出材料参数；单元组对象负责按类型分配派生类数组；输出对象负责输出单元定义和应力结果。
+
+Q4 和 T3 均复用 STAP++ 的 skyline 总刚度矩阵和 LDLT 求解器，不改变全局装配和求解流程。这样做的优点是风险小，原 Bar 单元行为保持不变；缺点是二维单元必须显式约束 $u_z$，否则会出现没有刚度贡献的自由度。
+
+\section{使用方法}
+在 Windows PowerShell 下可按如下方式构建和运行：
 \begin{lstlisting}
 cmake -S src -B build-codex
 cmake --build build-codex --config Debug
 .\build-codex\Debug\stap++.exe data\q4-single.dat
+.\build-codex\Debug\stap++.exe data\t3_generated\t3-single.dat
+\end{lstlisting}
+自动化验证脚本位于 \texttt{others/tools/}。生成和解析 T3 验证数据的命令为：
+\begin{lstlisting}
 python others/tools/t3_generate_cases.py
 python others/tools/t3_parse_results.py
 \end{lstlisting}
+Q4 对应脚本为 \texttt{q4\_generate\_cases.py} 和 \texttt{q4\_parse\_results.py}。
 
-\section{????}
-Q4 ? T3 ??? $2\times2$ ????????
+\section{程序验证与确认}
+\subsection{基础算例与回归测试}
+本项目运行了原 Bar 算例、已有 Q4 算例和新增 T3 算例。Bar 回归用于确认原功能未被破坏；Q4/T3 基础算例用于检查读入、装配、求解、应力输出是否形成闭环。运行结果显示，右侧受拉节点的水平位移为正，拉伸算例的平均 $\sigma_x$ 与外力方向一致，剪切算例的平均 $\tau_{xy}$ 与施加载荷方向一致。
+
+\subsection{分片试验}
+分片试验采用 $2\times2$ 网格和线性位移场
 \begin{equation}
-u=ax,\qquad v=by,
+u=ax,
+\qquad
+v=by,
 \end{equation}
-?? $a=1.0\times10^{-3}$?$b=-5.0\times10^{-4}$?????????????? $f=Ku$ ?????????????? STAP++ ?????????????????????
+其中 $a=1.0\times10^{-3}$，$b=-5.0\times10^{-4}$。为避免修改 STAP++ 的非零位移边界输入格式，验证脚本在程序外部组装刚度矩阵，并用 $\bm f=\bm K\bm u$ 反算等效节点力。该方法可以检验单元能否准确再现常应变状态。
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
-\caption{Q4 ? T3 ??????}
+\caption{Q4 与 T3 分片试验结果}
+\small
 \begin{tabular}{lcccc}
 \toprule
-?? & ?? $u_x$ ?? & ?? $u_y$ ?? & $\sigma_x$ ???? & $\sigma_y$ ???? \\
+单元 & 最大 $u_x$ 误差 & 最大 $u_y$ 误差 & $\sigma_x$ 平均误差 & $\sigma_y$ 平均误差 \\
 \midrule
 Q4 & $0.0$ & $0.0$ & $1.54\times10^{-4}$ & $4.62\times10^{-5}$ \\
 T3 & $0.0$ & $0.0$ & $1.54\times10^{-4}$ & $4.62\times10^{-5}$ \\
@@ -103,53 +188,78 @@ T3 & $0.0$ & $0.0$ & $1.54\times10^{-4}$ & $4.62\times10^{-5}$ \\
 \end{tabular}
 \end{table}
 
-????????????????????????????????????????????????????
+理论应力为 $\sigma_x=1.961538\times10^2$、$\sigma_y=-4.615385\times10^1$、$\tau_{xy}=0$。表中的应力误差主要来自输出文件保留五位科学计数法导致的截断；位移误差为零，说明 Q4 与 T3 均通过常应变分片试验。
 
-\section{????? Q4/T3 ??}
-?????????????????????????????????????? $8\times8$ ???????????????
+\subsection{网格加密自收敛分析}
+网格加密算例包括拉伸和剪切两类。左边界固定，右边界施加等效集中节点力。由于本阶段不再进行 ABAQUS 对比，收敛性以 $8\times8$ 网格结果作为参考值进行自收敛比较。
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
-\caption{???? Q4/T3 ?????}
-\begin{tabular}{ccccc}
+\caption{拉伸算例网格加密结果}
+\small
+\begin{tabular}{lcccc}
 \toprule
-?? & ?? & ?? $u_x$ & ?? $\sigma_x$ & ?? $8\times8$ ?? \\
+单元 & 网格 & 最大 $u_x$ & 平均 $\sigma_x$ & 相对差异 \\
 \midrule
 Q4 & $1\times1$ & $4.62010\times10^{-3}$ & $1.00000\times10^3$ & $2.14\times10^{-2}$ \\
+Q4 & $2\times2$ & $4.68107\times10^{-3}$ & $1.00000\times10^3$ & $8.44\times10^{-3}$ \\
 Q4 & $4\times4$ & $4.71071\times10^{-3}$ & $9.99999\times10^2$ & $2.16\times10^{-3}$ \\
 Q4 & $8\times8$ & $4.72091\times10^{-3}$ & $1.00000\times10^3$ & $0$ \\
 T3 & $1\times1$ & $4.85511\times10^{-3}$ & $9.99999\times10^2$ & $2.28\times10^{-2}$ \\
+T3 & $2\times2$ & $4.86852\times10^{-3}$ & $1.00000\times10^3$ & $2.56\times10^{-2}$ \\
 T3 & $4\times4$ & $4.79445\times10^{-3}$ & $1.00000\times10^3$ & $9.98\times10^{-3}$ \\
 T3 & $8\times8$ & $4.74706\times10^{-3}$ & $1.00000\times10^3$ & $0$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
-\caption{???? Q4/T3 ?????}
-\begin{tabular}{ccccc}
+\caption{剪切算例网格加密结果}
+\small
+\begin{tabular}{lcccc}
 \toprule
-?? & ?? & ?? $u_y$ & ?? $\tau_{xy}$ & ?? $8\times8$ ?? \\
+单元 & 网格 & 最大 $u_y$ & 平均 $\tau_{xy}$ & 相对差异 \\
 \midrule
 Q4 & $1\times1$ & $1.10053\times10^{-2}$ & $5.00000\times10^2$ & $3.51\times10^{-1}$ \\
+Q4 & $2\times2$ & $1.39833\times10^{-2}$ & $5.00000\times10^2$ & $1.75\times10^{-1}$ \\
 Q4 & $4\times4$ & $1.60605\times10^{-2}$ & $5.00000\times10^2$ & $5.27\times10^{-2}$ \\
 Q4 & $8\times8$ & $1.69541\times10^{-2}$ & $5.00000\times10^2$ & $0$ \\
 T3 & $1\times1$ & $8.58918\times10^{-3}$ & $5.00000\times10^2$ & $4.73\times10^{-1}$ \\
+T3 & $2\times2$ & $1.14415\times10^{-2}$ & $5.00000\times10^2$ & $2.99\times10^{-1}$ \\
 T3 & $4\times4$ & $1.45211\times10^{-2}$ & $5.00000\times10^2$ & $1.10\times10^{-1}$ \\
 T3 & $8\times8$ & $1.63122\times10^{-2}$ & $5.00000\times10^2$ & $0$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-?????Q4 ? T3 ????????????????????T3 ?????????????????????????? Q4 ???????????????????
+结果表明，Q4 和 T3 在拉伸与剪切算例中均随网格加密逐渐接近参考值。T3 在粗网格下与 Q4 有差异，这是因为 T3 为常应变三角形单元，同一正方形区域需要两个三角形近似；加密后其结果同样趋于稳定。
 
-\section{???????}
-?????????????? Bar??? Q4 ???? T3 ????????? \texttt{data/bar-6.dat}?\texttt{data/q4-single.dat}?\texttt{data/q4-plane-strain.dat}?\texttt{data/q4-two-element.dat}?\texttt{data/q4-shear.dat}?\texttt{data/q4\_generated/*.dat} ? \texttt{data/t3\_generated/*.dat} ???????
+\subsection{异常输入测试}
+异常测试用于确认程序能够发现明显错误输入：
+\begin{itemize}
+  \item Q4 非法材料模式：\texttt{q4-invalid-mode.dat}；
+  \item Q4 反向节点顺序导致 $\det J\le0$：\texttt{q4-invalid-jacobian.dat}；
+  \item T3 非法材料模式：\texttt{t3-invalid-mode.dat}；
+  \item T3 反向节点顺序导致 $A\le0$：\texttt{t3-invalid-area.dat}。
+\end{itemize}
+上述算例均按预期报错停止，说明材料模式检查和单元几何检查有效。
 
-???????Q4 ???????Q4 ?? Jacobi ????T3 ??????? T3 ?????????????????????????????
+\section{版本控制与回滚说明}
+项目使用 Git 进行版本控制。为便于从 T3 扩展回滚到原 Q4 最终版本，在新增 T3 前已创建备份 tag：
+\begin{lstlisting}
+backup/q4-final-before-t3
+\end{lstlisting}
+T3 开发在分支 \texttt{codex/add-t3-element} 上完成，并分成两个提交：第一个提交实现 T3 单元代码和框架接入，第二个提交加入 T3 验证算例、CSV 表格和本文报告。
 
-\section{??}
-?? STAP++ ?????? Q4 ????? Q4+T3 ???????????Q4 ????????????? Jacobi ???T3 ???????????????? Q4 ????????????????????????????????????????? I ??????????
+\section{结论}
+本文完成了 STAP++ 的二维平面弹性功能扩展。Q4 单元体现了等参映射、Jacobi 检查和数值积分；T3 单元体现了常应变三角形公式、面积检查和与 Q4 的对比验证。两类单元均支持平面应力和平面应变，均通过常应变分片试验，并在拉伸和剪切网格加密算例中表现出合理的自收敛趋势。相比只实现一个 Q4 单元，Q4+T3 的组合更完整地展示了二维有限元单元实现、验证和程序扩展能力。
+
+\section*{参考资料}
+\begin{enumerate}
+  \item 张雄，有限元法基础课程大作业说明，2026。
+  \item X. Zhang, T. Wang, Y. Liu, \textit{Computational Dynamics}, Tsinghua University Press.
+  \item STAP++ 源程序：\url{https://github.com/xzhang66/STAPpp}。
+\end{enumerate}
 
 \end{document}
