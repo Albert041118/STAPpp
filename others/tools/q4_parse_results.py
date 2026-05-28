@@ -132,7 +132,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", default="data/q4_generated/manifest.json")
     parser.add_argument("--dat-dir", default="data/q4_generated")
-    parser.add_argument("--table-dir", default="reports/tables")
+    parser.add_argument("--table-dir", default="doc/tables")
     args = parser.parse_args()
     manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     dat_dir = Path(args.dat_dir)
@@ -146,3 +146,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

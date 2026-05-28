@@ -91,13 +91,13 @@ D = \frac{E}{(1+\nu)(1-2\nu)}
 \end{itemize}
 验证流程如下：
 \begin{lstlisting}
-python tools/q4_generate_cases.py --outdir data/q4_generated --manifest data/q4_generated/manifest.json
+python others/tools/q4_generate_cases.py --outdir data/q4_generated --manifest data/q4_generated/manifest.json
 cmake -S src -B build-codex
 cmake --build build-codex --config Debug
 # 逐个运行 data/q4_generated/*.dat
-python tools/q4_parse_results.py --manifest data/q4_generated/manifest.json --dat-dir data/q4_generated --table-dir reports/tables
+python others/tools/q4_parse_results.py --manifest data/q4_generated/manifest.json --dat-dir data/q4_generated --table-dir doc/tables
 \end{lstlisting}
-生成的表格包括 \texttt{reports/tables/q4\_patch\_summary.csv}、\texttt{reports/tables/q4\_patch\_nodes.csv} 和 \texttt{reports/tables/q4\_convergence\_summary.csv}。
+生成的表格包括 \texttt{doc/tables/q4\_patch\_summary.csv}、\texttt{doc/tables/q4\_patch\_nodes.csv} 和 \texttt{doc/tables/q4\_convergence\_summary.csv}。
 
 \section{分片试验}
 分片试验采用 $2\times2$ Q4 网格和线性位移场：
@@ -178,3 +178,4 @@ $8\times8$ & $1.69541\times10^{-2}$ & $5.00000\times10^2$ & $0$ & 参考 \\
 当前 Q4 单元已经完成 STAP++ 框架接入，并通过了基础算例、正式分片试验和网格加密验证。验证结果表明，该实现能够正确处理平面应力/平面应变材料、Q4 刚度矩阵装配、中心点应力恢复和常见输入错误检查。下一步工作是进行 ABAQUS 对比验证并补充最终报告中的验证图表和结论。
 
 \end{document}
+
