@@ -16,7 +16,7 @@ This repository is organized for the FEM course project submission:
 
 - `src/` — STAP++ source code, including the added Q4 element implementation.
 - `data/` — input/output cases, including Q4 patch and mesh-refinement verification cases.
-- `doc/` — Q4 stage report and verification CSV tables.
+- `doc/` — final Q4 report and verification CSV tables.
 - `make/` — placeholder for generated/native build files; build outputs are not committed.
 - `others/` — course handouts, original generated reference documentation, helper scripts, and repository metadata.
 
