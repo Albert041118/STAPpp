@@ -70,3 +70,21 @@ public:
 //! Write material data to Stream
     virtual void Write(COutputter& output);
 };
+
+//! Material class for T3 plane elasticity element
+class CT3Material : public CMaterial
+{
+public:
+
+    double nu;          //!< Poisson's ratio
+    double thickness;   //!< Element thickness
+    unsigned int mode;  //!< 1: plane stress, 2: plane strain
+
+public:
+
+//! Read material data from stream Input
+    virtual bool Read(ifstream& Input);
+
+//! Write material data to Stream
+    virtual void Write(COutputter& output);
+};
