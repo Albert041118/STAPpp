@@ -54,6 +54,18 @@
   \item 修正材料读取失败未向上传递的问题，使非法材料模式能正常报错。
 \end{itemize}
 
+\subsection{新增与修改文件清单}
+为便于检查程序工作量，下面按类型列出本项目新增或重点修改的文件。除单元公式代码外，框架接入、材料输入、输出、自动化验证、算例数据和报告材料均已纳入仓库。
+
+\begin{itemize}
+  \item 单元实现文件：\texttt{src/h/Q4.h}、\texttt{src/cpp/Q4.cpp}、\texttt{src/h/T3.h}、\texttt{src/cpp/T3.cpp}。其中 Q4 负责四节点等参映射、$2\times2$ Gauss 积分和中心点应力恢复；T3 负责三节点面积计算、常应变矩阵和单元常应力恢复。
+  \item 材料与框架接入文件：\texttt{src/h/Material.h}、\texttt{src/cpp/Material.cpp}、\texttt{src/h/ElementGroup.h}、\texttt{src/cpp/ElementGroup.cpp}。这些文件新增 Q4/T3 材料类，并使元素组能根据 \texttt{NPAR(1)} 正确分配 Q4 或 T3 对象。
+  \item 输出文件：\texttt{src/h/Outputter.h}、\texttt{src/cpp/Outputter.cpp}。新增 Q4/T3 的材料参数、节点连接关系和 $\sigma_x,\sigma_y,\tau_{xy}$ 应力输出。
+  \item 验证脚本：\texttt{others/tools/q4\_generate\_cases.py}、\texttt{others/tools/q4\_parse\_results.py}、\texttt{others/tools/t3\_generate\_cases.py}、\texttt{others/tools/t3\_parse\_results.py}。这些脚本负责自动生成算例并从输出文件中汇总位移和应力结果。
+  \item 验证数据：\texttt{data/q4\_generated/} 和 \texttt{data/t3\_generated/} 存放分片试验、拉伸和剪切网格加密、非法输入等算例的输入输出文件。
+  \item 报告与表格：\texttt{doc/q4\_final\_report.tex}、\texttt{doc/q4\_final\_report.pdf} 和 \texttt{doc/tables/}。其中 CSV 表格保存分片试验和网格加密验证的原始汇总数据。
+\end{itemize}
+
 \subsection{材料输入格式}
 Q4 与 T3 采用相同的材料输入格式：
 \begin{lstlisting}
@@ -142,9 +154,39 @@ c_1&b_1&c_2&b_2&c_3&b_3
 T3 的应变和应力在单元内为常量，这使其实现简单、稳定，适合作为第二个扩展单元。
 
 \section{实现方案}
-程序实现遵循“最小改动”原则。单元对象负责读取节点编号和材料编号、生成位置矩阵、计算单元刚度和单元应力；材料对象负责读取和输出材料参数；单元组对象负责按类型分配派生类数组；输出对象负责输出单元定义和应力结果。
+程序实现遵循“最小改动、保持原框架”的原则。STAP++ 原程序已经具有节点、材料、元素组、总体装配、skyline 矩阵和 LDLT 求解器等基础结构，因此本项目没有重写求解器，而是将 Q4/T3 做成与 Bar 单元并列的派生单元。
 
-Q4 和 T3 均复用 STAP++ 的 skyline 总刚度矩阵和 LDLT 求解器，不改变全局装配和求解流程。这样做的优点是风险小，原 Bar 单元行为保持不变；缺点是二维单元必须显式约束 $u_z$，否则会出现没有刚度贡献的自由度。
+\subsection{框架接入流程}
+新增单元进入程序的流程如下：
+\begin{enumerate}
+  \item 输入文件中读取 \texttt{NPAR(1)}，确定元素组类型。Bar、Q4、T3 分别对应不同枚举值。
+  \item \texttt{ElementGroup} 根据元素类型分配正确的材料数组和元素数组。
+  \item 材料对象读取 $E,\nu,t,\texttt{mode}$，并判断平面应力或平面应变。
+  \item 单元对象读取节点编号和材料组号，保存节点指针和材料指针。
+  \item 单元生成位置矩阵，只取每个节点的 $u_x,u_y$ 两个自由度参与二维平面问题。
+  \item 总体装配流程调用每个单元的 \texttt{ElementStiffness}，求解后再调用 \texttt{ElementStress} 输出单元应力。
+\end{enumerate}
+
+\subsection{刚度矩阵与应力恢复实现}
+Q4 与 T3 的共同点是都先建立 $\bm B$ 矩阵和材料矩阵 $\bm D$，再计算 $\bm K_e$。不同点在于：Q4 的 $\bm B$ 随 Gauss 点变化，需要通过 Jacobi 矩阵将自然坐标导数转换到物理坐标；T3 的 $\bm B$ 在单元内为常量，可以直接由节点坐标和面积求得。
+
+应力恢复时，程序先由位置矩阵从总体位移向量中取出单元节点位移，再计算
+\begin{equation}
+\bm\varepsilon_e=\bm B\bm u_e,\qquad \bm\sigma_e=\bm D\bm\varepsilon_e.
+\end{equation}
+Q4 输出中心点应力，T3 输出单元常应力。这样输出格式统一，便于后续比较 Q4/T3 的平均应力和网格收敛趋势。
+
+\subsection{错误检查与稳定性处理}
+本项目增加了几类必要检查：
+\begin{itemize}
+  \item 材料 \texttt{mode} 必须为 1 或 2，避免本构矩阵未定义；
+  \item 厚度必须大于零，避免刚度矩阵无物理意义；
+  \item Q4 在 Gauss 点检查 $\det J>0$，发现反向或严重退化四边形；
+  \item T3 检查 $A>0$，发现顺时针节点顺序或零面积单元；
+  \item 修正材料读取错误未向上传递的问题，使错误输入能终止程序。
+\end{itemize}
+
+Q4 和 T3 均复用 STAP++ 的 skyline 总刚度矩阵和 LDLT 求解器，不改变全局装配和求解流程。这样做的优点是风险小，原 Bar 单元行为保持不变；需要注意的是，二维单元必须显式约束 $u_z$，否则会出现没有刚度贡献的自由度。
 
 \section{使用方法}
 在 Windows PowerShell 下可按如下方式构建和运行：
@@ -164,6 +206,15 @@ Q4 对应脚本为 \texttt{q4\_generate\_cases.py} 和 \texttt{q4\_parse\_result
 \section{程序验证与确认}
 \subsection{基础算例与回归测试}
 本项目运行了原 Bar 算例、已有 Q4 算例和新增 T3 算例。Bar 回归用于确认原功能未被破坏；Q4/T3 基础算例用于检查读入、装配、求解、应力输出是否形成闭环。运行结果显示，右侧受拉节点的水平位移为正，拉伸算例的平均 $\sigma_x$ 与外力方向一致，剪切算例的平均 $\tau_{xy}$ 与施加载荷方向一致。
+主要验证算例包括：
+\begin{itemize}
+  \item \texttt{data/bar-6.dat}：原 Bar 单元回归测试，确认原程序功能未被破坏。
+  \item \texttt{data/q4-single.dat}、\texttt{data/q4-plane-strain.dat}、\texttt{data/q4-two-element.dat}、\texttt{data/q4-shear.dat}：分别验证 Q4 的基本拉伸、平面应变材料、小网格装配和剪切应力输出。
+  \item \texttt{data/q4\_generated/q4\_patch\_2x2.dat}：Q4 常应变分片试验。
+  \item \texttt{data/t3\_generated/t3-single.dat}、\texttt{data/t3\_generated/t3-two-element.dat}：分别验证 T3 单元级拉伸和两个三角形拼成正方形的装配效果。
+  \item \texttt{data/t3\_generated/t3\_patch\_2x2.dat}：T3 常应变分片试验。
+  \item Q4/T3 非法输入算例：验证非法材料模式、反向节点顺序、非正 Jacobi 行列式和非正面积检查。
+\end{itemize}
 
 \subsection{分片试验}
 分片试验采用 $2\times2$ 网格和线性位移场
@@ -235,6 +286,10 @@ T3 & $8\times8$ & $1.63122\times10^{-2}$ & $5.00000\times10^2$ & $0$ \\
 
 结果表明，Q4 和 T3 在拉伸与剪切算例中均随网格加密逐渐接近参考值。T3 在粗网格下与 Q4 有差异，这是因为 T3 为常应变三角形单元，同一正方形区域需要两个三角形近似；加密后其结果同样趋于稳定。
 
+从误差趋势看，Q4 在拉伸算例中相对差异从 $2.14\times10^{-2}$ 下降到 $2.16\times10^{-3}$，剪切算例中从 $3.51\times10^{-1}$ 下降到 $5.27\times10^{-2}$。T3 在剪切问题中粗网格误差更大，但从 $1\times1$ 到 $4\times4$ 也呈明显下降趋势。这与单元理论相符：Q4 的双线性位移模式对矩形网格较有效，T3 的常应变模式需要更细网格才能描述弯曲或剪切变形梯度。
+
+本报告采用自收敛验证而非外部软件对比，原因是课程要求允许使用解析解或构造人工解进行收敛率分析。本项目中的分片试验属于构造人工解，网格加密算例则用于检查程序装配和单元刚度在更大网格下的稳定性。
+
 \subsection{异常输入测试}
 异常测试用于确认程序能够发现明显错误输入：
 \begin{itemize}
@@ -263,6 +318,16 @@ T3 & $8\times8$ & $1.63122\times10^{-2}$ & $5.00000\times10^2$ & $0$ \\
 backup/q4-final-before-t3
 \end{lstlisting}
 T3 开发分成两个主要提交：第一个提交实现 T3 单元代码和框架接入，第二个提交加入 T3 验证算例、CSV 表格和报告更新。最终修改已合并并推送到 GitHub 主分支。
+
+\section{当前局限与可扩展方向}
+当前实现已经满足二维平面弹性单元扩展和验证要求，但仍有进一步扩展空间：
+\begin{itemize}
+  \item 目前 Q4 输出中心点应力，T3 输出常应力；若要做更精细后处理，可进一步输出 Gauss 点应力或节点平均应力。
+  \item 当前 STAP++ 输入格式不支持非零位移边界条件，因此分片试验通过外部脚本反算等效节点力实现；若以后扩展输入格式，可直接施加非零位移边界。
+  \item 当前未实现 TecPlot/ParaView 云图输出；后续可将节点位移和单元应力导出为 VTK 或 TecPlot 格式，用于绘制变形图和应力云图。
+  \item 当前未加入带宽优化；对于更大规模网格，可进一步实现 RCM 节点重排序以提高 skyline 存储效率。
+\end{itemize}
+这些内容不影响本项目对 Q4/T3 单元基本原理、程序实现、输入格式、分片试验和网格加密验证的完整展示。
 
 \section{结论}
 本文完成了 STAP++ 的二维平面弹性功能扩展。Q4 单元体现了等参映射、Jacobi 检查和数值积分；T3 单元体现了常应变三角形公式、面积检查和与 Q4 的对比验证。两类单元均支持平面应力和平面应变，均通过常应变分片试验，并在拉伸和剪切网格加密算例中表现出合理的自收敛趋势。相比只实现一个 Q4 单元，Q4+T3 的组合更完整地展示了二维有限元单元实现、验证和程序扩展能力。
