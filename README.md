@@ -37,10 +37,10 @@ Repository provenance and version control:
 Build example:
 
 ```powershell
-cmake -S src -B build-codex
-cmake --build build-codex --config Debug
-.\build-codex\Debug\stap++.exe data\q4-single.dat
-.\build-codex\Debug\stap++.exe data\t3_generated\t3-single.dat
+cmake -S src -B build
+cmake --build build --config Debug
+.\build\Debug\stap++.exe data\q4-single.dat
+.\build\Debug\stap++.exe data\t3_generated\t3-single.dat
 ```
 
 Verification helper scripts are under `others/tools/`:

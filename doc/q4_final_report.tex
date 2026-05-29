@@ -16,7 +16,7 @@
 \setlength{\parindent}{2em}
 
 \title{STAP++ 二维平面弹性单元扩展报告\\Q4 四边形单元与 T3 三角形单元}
-\author{有限元法大作业 I：编程训练}
+\author{王冠泽\\2023013092\\有限元法大作业 I：编程训练}
 \date{2026 年 5 月 29 日}
 
 \begin{document}
@@ -149,10 +149,10 @@ Q4 和 T3 均复用 STAP++ 的 skyline 总刚度矩阵和 LDLT 求解器，不�
 \section{使用方法}
 在 Windows PowerShell 下可按如下方式构建和运行：
 \begin{lstlisting}
-cmake -S src -B build-codex
-cmake --build build-codex --config Debug
-.\build-codex\Debug\stap++.exe data\q4-single.dat
-.\build-codex\Debug\stap++.exe data\t3_generated\t3-single.dat
+cmake -S src -B build
+cmake --build build --config Debug
+.\build\Debug\stap++.exe data\q4-single.dat
+.\build\Debug\stap++.exe data\t3_generated\t3-single.dat
 \end{lstlisting}
 自动化验证脚本位于 \texttt{others/tools/}。生成和解析 T3 验证数据的命令为：
 \begin{lstlisting}
@@ -255,7 +255,6 @@ T3 & $8\times8$ & $1.63122\times10^{-2}$ & $5.00000\times10^2$ & $0$ \\
   \item 原始上游程序：\url{https://github.com/xzhang66/STAPpp}；
   \item 本地上游远端：\texttt{upstream} 指向课程指定 STAP++ 仓库；
   \item 主线分支：\texttt{main}；
-  \item T3 开发分支：\texttt{codex/add-t3-element}。
 \end{itemize}
 仓库根目录按课程要求保留 \texttt{src}、\texttt{make}、\texttt{data}、\texttt{doc} 和 \texttt{others}。其他课程资料、原始参考文档和辅助脚本统一放入 \texttt{others}。
 
