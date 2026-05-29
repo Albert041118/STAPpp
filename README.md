@@ -12,13 +12,27 @@ The documentation of STAP++ can be found at https://xzhang66.github.io/stappp/in
 
 ## Course project organization
 
-This repository is organized for the FEM course project submission:
+This repository is organized for the FEM course project submission. The work extends STAP++ with two 2D plane elasticity elements:
 
-- `src/` — STAP++ source code, including the added Q4 element implementation.
-- `data/` — input/output cases, including Q4 patch and mesh-refinement verification cases.
-- `doc/` — final Q4 report and verification CSV tables.
-- `make/` — placeholder for generated/native build files; build outputs are not committed.
-- `others/` — course handouts, original generated reference documentation, helper scripts, and repository metadata.
+- `src/` - STAP++ source code, including the added Q4 and T3 element implementations.
+- `data/` - input/output cases, including Bar regression, Q4 verification, and T3 verification cases.
+- `doc/` - final Q4+T3 report and verification CSV tables.
+- `make/` - placeholder for generated/native build files; build outputs are not committed.
+- `others/` - course handouts, original generated reference documentation, helper scripts, and repository metadata.
+
+Implemented features:
+
+- Q4 four-node isoparametric quadrilateral element (`NPAR(1)=2`).
+- T3 three-node constant-strain triangular element (`NPAR(1)=3`).
+- Plane stress and plane strain material modes for Q4/T3.
+- Patch tests, mesh-refinement/self-convergence cases, and invalid-input checks.
+
+Repository provenance and version control:
+
+- Original upstream source: https://github.com/xzhang66/STAPpp
+- Local upstream remote: `upstream=https://github.com/xzhang66/STAPpp.git`
+- Submission fork repository: https://github.com/Albert041118/STAPpp
+- Backup tag before adding T3: `backup/q4-final-before-t3`
 
 Build example:
 
@@ -26,6 +40,14 @@ Build example:
 cmake -S src -B build-codex
 cmake --build build-codex --config Debug
 .\build-codex\Debug\stap++.exe data\q4-single.dat
+.\build-codex\Debug\stap++.exe data\t3_generated\t3-single.dat
 ```
 
-Q4 verification helper scripts are under `others/tools/`.
+Verification helper scripts are under `others/tools/`:
+
+```powershell
+python others/tools/q4_generate_cases.py
+python others/tools/q4_parse_results.py
+python others/tools/t3_generate_cases.py
+python others/tools/t3_parse_results.py
+```

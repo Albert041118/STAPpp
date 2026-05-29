@@ -17,7 +17,7 @@
 
 \title{STAP++ 二维平面弹性单元扩展报告\\Q4 四边形单元与 T3 三角形单元}
 \author{有限元法大作业 I：编程训练}
-\date{2026 年 5 月 28 日}
+\date{2026 年 5 月 29 日}
 
 \begin{document}
 \maketitle
@@ -245,12 +245,25 @@ T3 & $8\times8$ & $1.63122\times10^{-2}$ & $5.00000\times10^2$ & $0$ \\
 \end{itemize}
 上述算例均按预期报错停止，说明材料模式检查和单元几何检查有效。
 
-\section{版本控制与回滚说明}
-项目使用 Git 进行版本控制。为便于从 T3 扩展回滚到原 Q4 最终版本，在新增 T3 前已创建备份 tag：
+\section{任务分工与完成情况}
+本项目为个人大作业，未采用团队分工。本人独立完成以下内容：阅读课程项目要求和 STAP++ 原程序；设计并实现 Q4 与 T3 二维平面弹性单元；编写材料输入、单元读入、刚度矩阵、应力恢复和异常检查代码；生成并运行 Bar 回归、Q4 验证和 T3 验证算例；整理 CSV 数据表；撰写并编译最终报告；使用 Git 进行版本控制和 GitHub 提交。
+
+\section{版本控制与仓库说明}
+项目使用 Git 进行版本控制，仓库来源和提交位置如下：
+\begin{itemize}
+  \item 提交仓库：\url{https://github.com/Albert041118/STAPpp}；
+  \item 原始上游程序：\url{https://github.com/xzhang66/STAPpp}；
+  \item 本地上游远端：\texttt{upstream} 指向课程指定 STAP++ 仓库；
+  \item 主线分支：\texttt{main}；
+  \item T3 开发分支：\texttt{codex/add-t3-element}。
+\end{itemize}
+仓库根目录按课程要求保留 \texttt{src}、\texttt{make}、\texttt{data}、\texttt{doc} 和 \texttt{others}。其他课程资料、原始参考文档和辅助脚本统一放入 \texttt{others}。
+
+为便于从 T3 扩展回滚到原 Q4 最终版本，在新增 T3 前已创建备份 tag：
 \begin{lstlisting}
 backup/q4-final-before-t3
 \end{lstlisting}
-T3 开发在分支 \texttt{codex/add-t3-element} 上完成，并分成两个提交：第一个提交实现 T3 单元代码和框架接入，第二个提交加入 T3 验证算例、CSV 表格和本文报告。
+T3 开发分成两个主要提交：第一个提交实现 T3 单元代码和框架接入，第二个提交加入 T3 验证算例、CSV 表格和报告更新。最终修改已合并并推送到 GitHub 主分支。
 
 \section{结论}
 本文完成了 STAP++ 的二维平面弹性功能扩展。Q4 单元体现了等参映射、Jacobi 检查和数值积分；T3 单元体现了常应变三角形公式、面积检查和与 Q4 的对比验证。两类单元均支持平面应力和平面应变，均通过常应变分片试验，并在拉伸和剪切网格加密算例中表现出合理的自收敛趋势。相比只实现一个 Q4 单元，Q4+T3 的组合更完整地展示了二维有限元单元实现、验证和程序扩展能力。
