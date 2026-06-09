@@ -74,6 +74,22 @@ void CElementGroup::CalculateMemberSize()
             ElementSize_ = sizeof(CT3);
             MaterialSize_ = sizeof(CT3Material);
             break;
+        case ElementTypes::H8:
+            ElementSize_ = sizeof(CH8);
+            MaterialSize_ = sizeof(CBridgeMaterial);
+            break;
+        case ElementTypes::Beam:
+            ElementSize_ = sizeof(CBeam3D);
+            MaterialSize_ = sizeof(CBridgeMaterial);
+            break;
+        case ElementTypes::Plate:
+            ElementSize_ = sizeof(CTieSpring);
+            MaterialSize_ = sizeof(CBridgeMaterial);
+            break;
+        case ElementTypes::Shell:
+            ElementSize_ = sizeof(CShell4R);
+            MaterialSize_ = sizeof(CBridgeMaterial);
+            break;
         default:
             std::cerr << "Type " << ElementType_ << " not available. See CElementGroup::CalculateMemberSize." << std::endl;
             exit(5);
@@ -95,6 +111,18 @@ void CElementGroup::AllocateElements(std::size_t size)
         case ElementTypes::T3:
             ElementList_ = new CT3[size];
             break;
+        case ElementTypes::H8:
+            ElementList_ = new CH8[size];
+            break;
+        case ElementTypes::Beam:
+            ElementList_ = new CBeam3D[size];
+            break;
+        case ElementTypes::Plate:
+            ElementList_ = new CTieSpring[size];
+            break;
+        case ElementTypes::Shell:
+            ElementList_ = new CShell4R[size];
+            break;
         default:
             std::cerr << "Type " << ElementType_ << " not available. See CElementGroup::AllocateElement." << std::endl;
             exit(5);
@@ -114,6 +142,12 @@ void CElementGroup::AllocateMaterials(std::size_t size)
             break;
         case ElementTypes::T3:
             MaterialList_ = new CT3Material[size];
+            break;
+        case ElementTypes::H8:
+        case ElementTypes::Beam:
+        case ElementTypes::Plate:
+        case ElementTypes::Shell:
+            MaterialList_ = new CBridgeMaterial[size];
             break;
         default:
             std::cerr << "Type " << ElementType_ << " not available. See CElementGroup::AllocateMaterial." << std::endl;

@@ -38,3 +38,12 @@ reports/build-*/
 
 # Generated LaTeX build directory after submission reorganization
 doc/build/
+
+# Local generated/draft reports (final report is doc/FEM报告.pdf)
+/doc/q4_final_report*.pdf
+/doc/q4_final_report*.tex
+/FEM报告*.pdf
+
+# Local Bridge validation outputs
+/local_backups/
+/local_bridge*/

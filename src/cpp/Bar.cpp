@@ -54,6 +54,14 @@ void CBar::Write(COutputter& output)
 		   << setw(9) << nodes_[1]->NodeNumber << setw(12) << ElementMaterial_->nset << endl;
 }
 
+void CBar::GenerateLocationMatrix()
+{
+    unsigned int i = 0;
+    for (unsigned int N = 0; N < NEN_; N++)
+        for (unsigned int D = 0; D < 3; D++)
+            LocationMatrix_[i++] = nodes_[N]->bcode[D];
+}
+
 //	Calculate element stiffness matrix 
 //	Upper triangular matrix, stored as an array column by colum starting from the diagonal element
 void CBar::ElementStiffness(double* Matrix)

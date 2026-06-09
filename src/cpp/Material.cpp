@@ -93,3 +93,19 @@ void CT3Material::Write(COutputter& output)
            << setw(16) << thickness
            << setw(8) << mode << endl;
 }
+
+bool CBridgeMaterial::Read(ifstream& Input)
+{
+    Input >> nset >> E >> nu;
+    for (unsigned int i = 0; i < 8; ++i)
+        Input >> p[i];
+    return true;
+}
+
+void CBridgeMaterial::Write(COutputter& output)
+{
+    output << setw(16) << E << setw(16) << nu;
+    for (unsigned int i = 0; i < 8; ++i)
+        output << setw(16) << p[i];
+    output << endl;
+}

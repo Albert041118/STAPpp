@@ -16,6 +16,7 @@
 #include "Bar.h"
 #include "Q4.h"
 #include "T3.h"
+#include "BridgeElements.h"
 #include "Material.h"
 #include "Node.h"
 

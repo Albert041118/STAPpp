@@ -10,6 +10,8 @@
 
 #include <iostream>
 #include <iomanip>
+#include <sstream>
+#include <vector>
 
 #include "Node.h"
 
@@ -22,14 +24,50 @@ CNode::CNode(double X, double Y, double Z)
     bcode[0] = 0;	// Boundary codes
     bcode[1] = 0;
     bcode[2] = 0;
+    bcode[3] = 1;
+    bcode[4] = 1;
+    bcode[5] = 1;
 };
 
 //	Read element data from stream Input
 bool CNode::Read(ifstream& Input)
 {
-	Input >> NodeNumber;	// node number
-	Input >> bcode[0] >> bcode[1] >> bcode[2]
-		  >> XYZ[0] >> XYZ[1] >> XYZ[2];
+    string line;
+    do {
+        if (!std::getline(Input, line))
+            return false;
+    } while (line.find_first_not_of(" \t\r\n") == string::npos);
+
+    std::stringstream ss(line);
+    std::vector<double> v;
+    double x;
+    while (ss >> x)
+        v.push_back(x);
+
+    if (v.size() >= 10)
+    {
+        NodeNumber = static_cast<unsigned int>(v[0]);
+        for (unsigned int i = 0; i < NDF; ++i)
+            bcode[i] = static_cast<unsigned int>(v[1+i]);
+        XYZ[0] = v[7]; XYZ[1] = v[8]; XYZ[2] = v[9];
+    }
+    else if (v.size() >= 7)
+    {
+        // Legacy STAP++ .dat: node b1 b2 b3 x y z.
+        // Rotational DOFs are fixed by default so old Bar/Q4/T3 cases do not gain
+        // zero-stiffness equations after NDF is extended to 6.
+        NodeNumber = static_cast<unsigned int>(v[0]);
+        bcode[0] = static_cast<unsigned int>(v[1]);
+        bcode[1] = static_cast<unsigned int>(v[2]);
+        bcode[2] = static_cast<unsigned int>(v[3]);
+        bcode[3] = bcode[4] = bcode[5] = 1;
+        XYZ[0] = v[4]; XYZ[1] = v[5]; XYZ[2] = v[6];
+    }
+    else
+    {
+        cerr << "*** Error *** Invalid node input line: " << line << endl;
+        return false;
+    }
 
 	return true;
 }

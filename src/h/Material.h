@@ -88,3 +88,15 @@ public:
 //! Write material data to Stream
     virtual void Write(COutputter& output);
 };
+
+//! Generic material/section data for Bridge H8, Beam and Shell elements
+class CBridgeMaterial : public CMaterial
+{
+public:
+    double nu;
+    double p[8];   //!< section parameters: shell t; beam A/Iy/Iz/J/orient; H8 unused
+
+public:
+    virtual bool Read(ifstream& Input);
+    virtual void Write(COutputter& output);
+};

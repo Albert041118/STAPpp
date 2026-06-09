@@ -12,6 +12,7 @@
 #include "Bar.h"
 #include "Outputter.h"
 #include "Clock.h"
+#include "BridgeSolver.h"
 
 using namespace std;
 
@@ -28,10 +29,21 @@ int main(int argc, char *argv[])
 
     // If the input file name is provided with an extension
     if (found != std::string::npos) {
-        if (filename.substr(found) == ".dat")
+        if (filename.substr(found) == ".inp")
+        {
+            string base = filename.substr(0, found);
+            string datFile = base + "_stap_converted.dat";
+            if (!ConvertBridgeInpToStapDat(filename, datFile))
+            {
+                cerr << "*** Error *** Bridge inp conversion failed!" << endl;
+                exit(1);
+            }
+            filename = base + "_stap_converted";
+        }
+        else if (filename.substr(found) == ".dat")
             filename = filename.substr(0, found);
         else {
-            // The input file name must has an extension of 'dat'
+            // The input file name must has an extension of 'dat' or 'inp'
             cout << "*** Error *** Invalid file extension: "
                  << filename.substr(found+1) << endl;
             exit(1);

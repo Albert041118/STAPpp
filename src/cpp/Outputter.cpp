@@ -437,6 +437,34 @@ void COutputter::OutputElementStress()
                 break;
             }
 
+            case ElementTypes::H8:
+            {
+                *this << "  H8 solid element stresses are assembled in the STAP++ framework."
+                      << "  Detailed stress output is omitted in this bridge compatibility run." << endl << endl;
+                break;
+            }
+
+            case ElementTypes::Beam:
+            {
+                *this << "  B31 beam elements are assembled in the STAP++ framework."
+                      << "  Detailed section force output is omitted in this bridge compatibility run." << endl << endl;
+                break;
+            }
+
+            case ElementTypes::Plate:
+            {
+                *this << "  Tie penalty spring elements are assembled in the STAP++ framework."
+                      << "  No stress output is required." << endl << endl;
+                break;
+            }
+
+            case ElementTypes::Shell:
+            {
+                *this << "  S4R shell elements are assembled in the STAP++ framework."
+                      << "  Detailed shell stress output is omitted in this bridge compatibility run." << endl << endl;
+                break;
+            }
+
 			default: // Invalid element type
 				cerr << "*** Error *** Elment type " << ElementType
 					<< " has not been implemented.\n\n";

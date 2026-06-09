@@ -31,6 +31,9 @@ public:
 //!	Write element data to stream
 	virtual void Write(COutputter& output);
 
+//! Generate location matrix using translational ux, uy, uz only
+    virtual void GenerateLocationMatrix();
+
 //!	Calculate element stiffness matrix
 	virtual void ElementStiffness(double* Matrix);
 
